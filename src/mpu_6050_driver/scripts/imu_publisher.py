@@ -3,7 +3,7 @@
 import rospy
 from sensor_msgs.msg import Imu
 from std_msgs.msg import Header
-from tf.transformations import quaternion_from_euler
+from scipy.spatial.transform import Rotation as R
 import smbus
 import time
 import math
@@ -154,7 +154,7 @@ class IMUPublisher:
             imu_msg.header.frame_id = "imu_link"
 
             # Orientamento come quaternione
-            q = quaternion_from_euler(self.roll, self.pitch, self.yaw)
+            q = R.from_euler('xyz',[self.roll, self.pitch, self.yaw]).as_quat()
             imu_msg.orientation.x = q[0]
             imu_msg.orientation.y = q[1]
             imu_msg.orientation.z = q[2]

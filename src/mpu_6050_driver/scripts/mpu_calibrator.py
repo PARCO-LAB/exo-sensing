@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/home/nvidia/exo-sensing/.venv/bin/python
 # -*- coding: utf-8 -*-
 import smbus
 import time
