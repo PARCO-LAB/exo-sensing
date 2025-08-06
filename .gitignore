@@ -61,3 +61,4 @@ log/
 
 # Project specific
 src/cometh_imu/COMETH
+.venv/
