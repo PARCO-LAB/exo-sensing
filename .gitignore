@@ -58,3 +58,6 @@ log/
 *.pyc
 *.swp
 *.log
+
+# Project specific
+src/cometh_imu/COMETH
