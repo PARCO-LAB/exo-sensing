@@ -1,0 +1,17 @@
+{
+  "rabbit_host": "10.197.18.11",
+  "rabbit_port": 32561,
+  "rabbit_queue": "wearable_mgmt_opera_rpc_queue",
+  "rabbit_virtual_host": "/rpc",
+  "rabbit_user": "opera-rpc-server",
+  "rabbit_password": "+Y59Agw6",
+
+  "kafka_bootstrap_server": "10.197.18.11",
+  "kafka_port": "30531",
+  "kafka_topic": "opera_data_wearable_raw",
+
+  "transmission_mode": "False",
+  "sensor_sampling_frequency": 60,
+  "fall_time_window_for_detection": 2,
+  "shake_time_window_for_detection": 2
+}
