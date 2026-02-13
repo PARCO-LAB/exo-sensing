@@ -7,18 +7,29 @@ BAG_NAME="zed_stereo_${DATE}.bag"
 
 mkdir -p $BAG_DIR
 
+source /opt/ros/humble/setup.bash
+source ~/ros2_ws/install/setup.bash
 source ./.venv/bin/activate
 
 python main.py &
 IMU_PID=$!
 
-chmod +x launch_zed.sh
-launch_zed.sh &
+ros2 launch zed_wrapper zedm.launch.py \
+    camera.camera_fps:=30 \
+    depth.depth_mode:=NONE \
+    depth.point_cloud_enabled:=false \
+    positional_tracking.pos_tracking_enabled:=false \
+    mapping.mapping_enabled:=false \
+    object_detection.object_detection_enabled:=false \
+    publish_tf:=false \
+    sensors.publish_imu_tf:=false \
+    camera.grab_resolution:=HD720 \
+    camera.enable_image_enhancement:=false &
 ZED_PID=$!
 
 sleep 2
 
-rosbag record -O $BAG_DIR/$BAG_NAME -a &
+ros2 bag record -o $BAG_DIR/$BAG_NAME -a &
 ROSBAG_PID=$!
 
 echo "Recorder running"

@@ -2,7 +2,6 @@ import json
 import threading
 import time
 from sensor import Sensor
-from camera import CameraPublisher
 from delegates.motion_delegate import MotionDelegate
 from delegates.scanner_delegate import ScanDelegate
 from bluepy.btle import Scanner
@@ -67,7 +66,7 @@ class Controller(object):
                             mac=device.addr,
                             thread_sync=self.__synchronizer,
                             sensor_delegates=[MotionDelegate],
-                            services={'rawdata': True} # TODO: correct with useful data for us
+                            services={'rawdata': True}, # TODO: correct with useful data for us
                         )
 
                         # Keep track of connected devices
@@ -78,18 +77,6 @@ class Controller(object):
 
                     except Exception as e:
                         print(e.args)
-
-            # Get camera devices
-            cameras = sl.Camera.get_device_list()
-
-            for cam in cameras:
-                try:
-                    zed = CameraPublisher(cam.serial_number)
-                    zed.run()
-                except Exception as e:
-                    print(e.args)
-
-
 
             # Start recording
             time.sleep(2)

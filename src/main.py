@@ -1,9 +1,11 @@
 from controller import Controller
-import rospy
+import rclpy
 
 if __name__ == '__main__':
-    # ROS initialization
-    rospy.init_node("sensors_acquisition_node")
+    # ROS initialization # NOTE: This is good FOR NOW, until is multithreading and not multiprocess
+    rclpy.init()
 
     Controller().start_session()
+
+    rclpy.shutdown()
 

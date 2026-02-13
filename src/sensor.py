@@ -5,7 +5,7 @@ import time
 
 
 class Sensor(object):
-
+    # TODO: correct default values
     def __init__(
             self,
             mac,

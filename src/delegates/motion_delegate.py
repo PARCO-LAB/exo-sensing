@@ -6,9 +6,13 @@ import struct
 from datetime import datetime
 import binascii
 import os
-import rospy
-from sensor_msgs.msg import Imu, Header
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Imu
+from std_msgs.msg import Header
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, qos_profile_sensor_data
 
+DEFAULT_UNKNOWN_COV = [-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0]
 
 class MotionDelegate(DefaultDelegate):
 
@@ -69,7 +73,15 @@ class MotionDelegate(DefaultDelegate):
             56: self._unpack_orientation
         }
 
-        self.pub = rospy.Publisher(f"/imu/{self.sensor_nickname}", Imu, queue_size=50)
+        
+        self.node = Node(f'node_{self.sensor_nickname}')
+        qos = QoSProfile(
+                    reliability=ReliabilityPolicy.RELIABLE,
+                    history=HistoryPolicy.KEEP_LAST,
+                    depth=10
+                )
+
+        self.pub = self.node.create_publisher(Imu, f'/imu/{self.sensor_nickname}', qos)
 
     # TODO: transform the log to file part of the below functions into ros message.
     def _unpack_gravity_vector(self, d):
@@ -149,7 +161,7 @@ class MotionDelegate(DefaultDelegate):
         # TODO: And the nordic timestamp?
         msg = Imu()
         msg.header = Header()
-        msg.header.stamp = rospy.Time.now()
+        msg.header.stamp = self.node.get_clock().now().to_msg()
         msg.header.frame_id = self.mac
         
         # Get Time
@@ -191,13 +203,19 @@ class MotionDelegate(DefaultDelegate):
         #     'z': comp_z
         # }
 
-        msg.linear_acceleration.x = acc_x
-        msg.linear_acceleration.y = acc_y
-        msg.linear_acceleration.z = acc_z
+        msg.linear_acceleration.x = float(acc_x)
+        msg.linear_acceleration.y = float(acc_y)
+        msg.linear_acceleration.z = float(acc_z)
 
-        msg.angular_velocity.x = gyro_x
-        msg.angular_velocity.y = gyro_y
-        msg.angular_velocity.z = gyro_z
+        msg.angular_velocity.x = float(gyro_x)
+        msg.angular_velocity.y = float(gyro_y)
+        msg.angular_velocity.z = float(gyro_z)
+
+        
+        msg.orientation_covariance = DEFAULT_UNKNOWN_COV
+        msg.angular_velocity_covariance = DEFAULT_UNKNOWN_COV
+        msg.linear_acceleration_covariance = DEFAULT_UNKNOWN_COV
+
 
         self.pub.publish(msg)
 
