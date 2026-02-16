@@ -67,10 +67,10 @@ class MotionDelegate(DefaultDelegate):
 
         # Set handlers
         self.handlers = {
-            77: self._unpack_gravity_vector,
-            74: self._unpack_heading,
+            #77: self._unpack_gravity_vector,
+            #74: self._unpack_heading,
             65: self._unpack_raw_data,
-            56: self._unpack_orientation
+            #56: self._unpack_orientation
         }
 
         
