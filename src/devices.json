@@ -18,5 +18,6 @@
   "FB:AD:71:FB:23:E0": "left_wrist",
   "EF:B0:21:DB:81:A6": "right_wrist",
   "C1:EF:AD:98:A5:74": "left_ankle",
-  "F0:0E:61:EF:88:F6": "P5"
+  "F0:0E:61:EF:88:F6": "P5",
+  "C5:CB:CD:C3:28:DA": "P1"
 }

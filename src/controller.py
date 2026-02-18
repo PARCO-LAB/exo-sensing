@@ -5,7 +5,6 @@ from sensor import Sensor
 from delegates.motion_delegate import MotionDelegate
 from delegates.scanner_delegate import ScanDelegate
 from bluepy.btle import Scanner
-import pyzed.sl as sl
 
 
 class Controller(object):
@@ -49,12 +48,10 @@ class Controller(object):
     def start_session(self):
 
         print('Session started')
-
         while self.__is_active:
             # Scan for IMUs
-            self.__scanner.scan(passive=True)
+            self.__scanner.scan(timeout=10,passive=True)
             discovered_devices = list(self.__scanner.getDevices())
-
             # Connecting the IMUs
             for device in discovered_devices:
                 # Connect only allowed and connectable devices
@@ -84,6 +81,6 @@ class Controller(object):
 
             # TODO: implement gracefull exit
             # async_result.get()
-            time.sleep(30)
+            time.sleep(1000)
 
         print('Session ended')

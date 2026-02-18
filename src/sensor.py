@@ -11,7 +11,7 @@ class Sensor(object):
             mac,
             thread_sync,
             nickname: str = 'NordicThingy',
-            sampling_frequency: int = 32,
+            sampling_frequency: int = 60,
             sensor_delegates: list = None,
             services: dict = None
     ):
