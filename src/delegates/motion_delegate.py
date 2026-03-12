@@ -8,6 +8,7 @@ import binascii
 import os
 import rclpy
 from rclpy.node import Node
+from imu_tick_msgs.msg import ImuTick
 from sensor_msgs.msg import Imu
 from std_msgs.msg import Header
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, qos_profile_sensor_data
@@ -81,7 +82,7 @@ class MotionDelegate(DefaultDelegate):
                     depth=10
                 )
 
-        self.pub = self.node.create_publisher(Imu, f'/imu/{self.sensor_nickname}', qos)
+        self.pub = self.node.create_publisher(ImuTick, f'/imu/{self.sensor_nickname}', qos)
 
     # TODO: transform the log to file part of the below functions into ros message.
     def _unpack_gravity_vector(self, d):
@@ -157,13 +158,15 @@ class MotionDelegate(DefaultDelegate):
 
     def _unpack_raw_data(self, d):
 
-        # TODO: write a new message that fits better your purposes
-        # TODO: And the nordic timestamp?
-        msg = Imu()
-        msg.header = Header()
-        msg.header.stamp = self.node.get_clock().now().to_msg()
-        msg.header.frame_id = self.mac
+        msg = ImuTick()
+        msg.imu = Imu()
+        msg.imu.header = Header()
+        msg.imu.header.stamp = self.node.get_clock().now().to_msg()
+        msg.imu.header.frame_id = self.mac
         
+        tick = struct.unpack('H', d[18:20])[0] & 0xFFFF
+        msg.tick = tick
+        #print(f"Arrived tick: {tick}")
         # Get Time
         # now = datetime.now()
 
@@ -203,18 +206,18 @@ class MotionDelegate(DefaultDelegate):
         #     'z': comp_z
         # }
 
-        msg.linear_acceleration.x = float(acc_x)
-        msg.linear_acceleration.y = float(acc_y)
-        msg.linear_acceleration.z = float(acc_z)
+        msg.imu.linear_acceleration.x = float(acc_x)
+        msg.imu.linear_acceleration.y = float(acc_y)
+        msg.imu.linear_acceleration.z = float(acc_z)
 
-        msg.angular_velocity.x = float(gyro_x)
-        msg.angular_velocity.y = float(gyro_y)
-        msg.angular_velocity.z = float(gyro_z)
+        msg.imu.angular_velocity.x = float(gyro_x)
+        msg.imu.angular_velocity.y = float(gyro_y)
+        msg.imu.angular_velocity.z = float(gyro_z)
 
         
-        msg.orientation_covariance = DEFAULT_UNKNOWN_COV
-        msg.angular_velocity_covariance = DEFAULT_UNKNOWN_COV
-        msg.linear_acceleration_covariance = DEFAULT_UNKNOWN_COV
+        msg.imu.orientation_covariance = DEFAULT_UNKNOWN_COV
+        msg.imu.angular_velocity_covariance = DEFAULT_UNKNOWN_COV
+        msg.imu.linear_acceleration_covariance = DEFAULT_UNKNOWN_COV
 
 
         self.pub.publish(msg)

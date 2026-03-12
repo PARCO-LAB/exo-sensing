@@ -64,3 +64,4 @@ src/cometh_imu/COMETH
 .venv/
 src/zed-ros2-wrapper
 src/ros_bags
+src/zed-ros2-examples/

@@ -1,5 +1,6 @@
 import sys
 import threading
+import multiprocessing as Process
 from bluepy.thingy52 import Thingy52
 import time
 
@@ -11,7 +12,7 @@ class Sensor(object):
             mac,
             thread_sync,
             nickname: str = 'NordicThingy',
-            sampling_frequency: int = 60,
+            sampling_frequency: int = 100,
             sensor_delegates: list = None,
             services: dict = None
     ):
@@ -22,7 +23,6 @@ class Sensor(object):
         self.sampling_frequency = sampling_frequency
         self.sensor_delegates = sensor_delegates
         self.services = services
-
         # Set delegates
         for delegate in sensor_delegates:
             self.thingy.setDelegate(delegate(self.nickname, self.thingy.addr))
@@ -81,6 +81,7 @@ class Sensor(object):
             self.thingy.motion.set_stepcnt_notification(True)
         if services.get('rawdata', False):
             self.thingy.motion.enable()
+            self.thingy.motion.configure(motion_freq=self.sampling_frequency)
             self.thingy.motion.set_rawdata_notification(True)
         if services.get('euler', False):
             self.thingy.motion.enable()
@@ -124,7 +125,6 @@ class Sensor(object):
 
             # Enable sensors
             self.enabling_selected_sensors(self.services)
-
             # Set LED in recording mode
             self.thingy.ui.set_led_mode_breathe(0x01, 50, 100)
 
