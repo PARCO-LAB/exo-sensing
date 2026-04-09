@@ -22,6 +22,7 @@ from sensor_msgs.msg import CompressedImage, Image
 
 IMAGE_THREADS = 4
 CSV_BUFFER_SIZE = 2000
+OUTPUT_DIR = './camera_body'
 
 
 # -----------------------------
@@ -102,213 +103,218 @@ def save_depth_png(path, msg):
 # -----------------------------
 
 def main():
-    # record_dir = "/mnt/nvme/ros_bags/"
-    # all_path = glob.glob("") 
+    record_dir = "/mnt/nvme/ros_bags/"
+    all_path = glob.glob(record_dir+'*.bag')
 
-    bag_path = "/mnt/nvme/ros_bags/all_data_2026-03-31_20-14-35.bag"
-    output_dir = "action1"
+    for bag_path in all_path: 
+        output_dir = OUTPUT_DIR + bag_path.split('/')[-1].split('.')[0]
 
-    ensure_dir(output_dir)
+        # bag_path = "/mnt/nvme/ros_bags/all_data_2026-03-31_20-14-35.bag"
+        # output_dir = "action1"
 
-    storage_options = rosbag2_py.StorageOptions(
-        uri=bag_path,
-        storage_id="sqlite3"
-    )
+        ensure_dir(output_dir)
 
-    converter_options = rosbag2_py.ConverterOptions(
-        input_serialization_format="cdr",
-        output_serialization_format="cdr"
-    )
+        storage_options = rosbag2_py.StorageOptions(
+            uri=bag_path,
+            storage_id="sqlite3"
+        )
 
-    reader = rosbag2_py.SequentialReader()
-    reader.open(storage_options, converter_options)
+        converter_options = rosbag2_py.ConverterOptions(
+            input_serialization_format="cdr",
+            output_serialization_format="cdr"
+        )
 
-    topics = reader.get_all_topics_and_types()
-    type_map = {t.name: t.type for t in topics}
+        reader = rosbag2_py.SequentialReader()
+        reader.open(storage_options, converter_options)
 
-    print("\nTopics:")
-    for t in topics:
-        print(f"{t.name} -> {t.type}")
+        topics = reader.get_all_topics_and_types()
+        type_map = {t.name: t.type for t in topics}
 
-    # CSV
-    csv_files = {}
-    csv_writers = {}
-    csv_buffers = {}
-    csv_headers_written = {}
-    csv_headers_per_topic = {}
+        print("\nTopics:")
+        for t in topics:
+            print(f"{t.name} -> {t.type}")
 
-    # image dirs
-    image_dirs = {}
+        # CSV
+        csv_files = {}
+        csv_writers = {}
+        csv_buffers = {}
+        csv_headers_written = {}
+        csv_headers_per_topic = {}
 
-    executor = ThreadPoolExecutor(max_workers=IMAGE_THREADS)
+        # image dirs
+        image_dirs = {}
 
-    # prepare csv files
-    for topic in type_map:
+        executor = ThreadPoolExecutor(max_workers=IMAGE_THREADS)
 
-        clean = sanitize_topic(topic)
-        csv_path = os.path.join(output_dir, clean + ".csv")
+        # prepare csv files
+        for topic in type_map:
 
-        f = open(csv_path, "w", newline="")
-        writer = csv.writer(f)
+            clean = sanitize_topic(topic)
+            csv_path = os.path.join(output_dir, clean + ".csv")
 
-        csv_files[topic] = f
-        csv_writers[topic] = writer
-        csv_buffers[topic] = []
-        csv_headers_written[topic] = False
-        csv_headers_per_topic[topic] = []
+            f = open(csv_path, "w", newline="")
+            writer = csv.writer(f)
 
-    msg_counter = 0
+            csv_files[topic] = f
+            csv_writers[topic] = writer
+            csv_buffers[topic] = []
+            csv_headers_written[topic] = False
+            csv_headers_per_topic[topic] = []
 
-    # -----------------------------
-    # reading bag
-    # -----------------------------
+        msg_counter = 0
 
-    while reader.has_next():
+        # -----------------------------
+        # reading bag
+        # -----------------------------
 
-        topic, data, t = reader.read_next()
+        while reader.has_next():
 
-        msg_type = type_map[topic]
-        msg_class = get_message(msg_type)
-        msg = deserialize_message(data, msg_class)
+            topic, data, t = reader.read_next()
 
-        writer = csv_writers[topic]
+            msg_type = type_map[topic]
+            msg_class = get_message(msg_type)
+            msg = deserialize_message(data, msg_class)
 
-        timestamp = rosbag_time_to_sec(t)
+            writer = csv_writers[topic]
 
-        # -------------------------
-        # RGB compressed image
-        # -------------------------
+            timestamp = rosbag_time_to_sec(t)
 
-        if isinstance(msg, CompressedImage):
+            # -------------------------
+            # RGB compressed image
+            # -------------------------
 
-            if topic not in image_dirs:
+            if isinstance(msg, CompressedImage):
 
-                clean = sanitize_topic(topic)
-                img_dir = os.path.join(output_dir, clean)
-                ensure_dir(img_dir)
+                if topic not in image_dirs:
 
-                image_dirs[topic] = img_dir
+                    clean = sanitize_topic(topic)
+                    img_dir = os.path.join(output_dir, clean)
+                    ensure_dir(img_dir)
 
-                writer.writerow([
-                    "timestamp",
-                    "sensor_timestamp",
-                    "image_file"
-                ])
+                    image_dirs[topic] = img_dir
 
-                csv_headers_written[topic] = True
+                    writer.writerow([
+                        "timestamp",
+                        "sensor_timestamp",
+                        "image_file"
+                    ])
 
-            img_dir = image_dirs[topic]
+                    csv_headers_written[topic] = True
 
-            filename = f"{t}.jpg"
-            path = os.path.join(img_dir, filename)
+                img_dir = image_dirs[topic]
 
-            executor.submit(save_rgb_image, path, msg.data)
+                # sensor timestamp
+                if hasattr(msg, "header"):
+                    st = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+                    filename = f"{st}.jpg"
+                else:
+                    st = None
+                    filename = f"{t}.jpg"
 
-            # sensor timestamp
-            if hasattr(msg, "header"):
-                st = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
-            else:
-                st = None
+                path = os.path.join(img_dir, filename)
 
-            row = [timestamp, st, filename]
+                executor.submit(save_rgb_image, path, msg.data)
 
-        # -------------------------
-        # Depth image (Z16 → PNG)
-        # -------------------------
+                row = [timestamp, st, filename]
 
-        elif isinstance(msg, Image) and "aligned_depth_to_color" in topic:
+            # -------------------------
+            # Depth image (Z16 → PNG)
+            # -------------------------
 
-            if topic not in image_dirs:
+            elif isinstance(msg, Image) and "aligned_depth_to_color" in topic:
 
-                clean = sanitize_topic(topic)
-                img_dir = os.path.join(output_dir, clean)
-                ensure_dir(img_dir)
+                if topic not in image_dirs:
 
-                image_dirs[topic] = img_dir
+                    clean = sanitize_topic(topic)
+                    img_dir = os.path.join(output_dir, clean)
+                    ensure_dir(img_dir)
 
-                writer.writerow([
-                    "timestamp",
-                    "sensor_timestamp",
-                    "depth_file"
-                ])
+                    image_dirs[topic] = img_dir
 
-                csv_headers_written[topic] = True
+                    writer.writerow([
+                        "timestamp",
+                        "sensor_timestamp",
+                        "depth_file"
+                    ])
 
-            img_dir = image_dirs[topic]
+                    csv_headers_written[topic] = True
 
-            filename = f"{t}.png"
-            path = os.path.join(img_dir, filename)
+                img_dir = image_dirs[topic]
 
-            executor.submit(save_depth_png, path, msg)
+                # sensor timestamp
+                if hasattr(msg, "header"):
+                    st = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+                    filename = f"{st}.jpg"
+                else:
+                    st = None
+                    filename = f"{t}.jpg"
+                path = os.path.join(img_dir, filename)
 
-            if hasattr(msg, "header"):
-                st = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
-            else:
-                st = None
+                executor.submit(save_depth_png, path, msg)
 
-            row = [timestamp, st, filename]
+                row = [timestamp, st, filename]
 
-        # -------------------------
-        # generic message
-        # -------------------------
-
-        else:
-
-            flat = flatten_msg(msg)
-            flat["timestamp"] = timestamp
-
-            if not csv_headers_written[topic]:
-
-                headers = list(flat.keys())
-                csv_headers_per_topic[topic] = headers
-
-                writer.writerow(headers)
-                csv_headers_written[topic] = True
+            # -------------------------
+            # generic message
+            # -------------------------
 
             else:
+
+                flat = flatten_msg(msg)
+                flat["timestamp"] = timestamp
+
+                if not csv_headers_written[topic]:
+
+                    headers = list(flat.keys())
+                    csv_headers_per_topic[topic] = headers
+
+                    writer.writerow(headers)
+                    csv_headers_written[topic] = True
+
+                else:
+
+                    headers = csv_headers_per_topic[topic]
+
+                    new_keys = [k for k in flat.keys() if k not in headers]
+
+                    if new_keys:
+                        print(f"[WARN] nuove colonne in {topic}: {new_keys}")
+                        headers.extend(new_keys)
 
                 headers = csv_headers_per_topic[topic]
 
-                new_keys = [k for k in flat.keys() if k not in headers]
+                row = [flat.get(k, None) for k in headers]
 
-                if new_keys:
-                    print(f"[WARN] nuove colonne in {topic}: {new_keys}")
-                    headers.extend(new_keys)
+            # -------------------------
+            # buffering
+            # -------------------------
 
-            headers = csv_headers_per_topic[topic]
+            csv_buffers[topic].append(row)
 
-            row = [flat.get(k, None) for k in headers]
+            if len(csv_buffers[topic]) >= CSV_BUFFER_SIZE:
+                writer.writerows(csv_buffers[topic])
+                csv_buffers[topic].clear()
 
-        # -------------------------
-        # buffering
-        # -------------------------
+            msg_counter += 1
 
-        csv_buffers[topic].append(row)
+            if msg_counter % 10000 == 0:
+                print(f"{msg_counter} messages processed")
 
-        if len(csv_buffers[topic]) >= CSV_BUFFER_SIZE:
-            writer.writerows(csv_buffers[topic])
-            csv_buffers[topic].clear()
+        # -----------------------------
+        # flush
+        # -----------------------------
 
-        msg_counter += 1
+        for topic in csv_buffers:
+            if csv_buffers[topic]:
+                csv_writers[topic].writerows(csv_buffers[topic])
 
-        if msg_counter % 10000 == 0:
-            print(f"{msg_counter} messages processed")
+        for f in csv_files.values():
+            f.close()
 
-    # -----------------------------
-    # flush
-    # -----------------------------
+        executor.shutdown(wait=True)
 
-    for topic in csv_buffers:
-        if csv_buffers[topic]:
-            csv_writers[topic].writerows(csv_buffers[topic])
-
-    for f in csv_files.values():
-        f.close()
-
-    executor.shutdown(wait=True)
-
-    print("\nDataset extraction completed")
-    print(f"Total messages: {msg_counter}")
+        print("\nDataset extraction completed")
+        print(f"Total messages: {msg_counter}")
 
 
 if __name__ == "__main__":
