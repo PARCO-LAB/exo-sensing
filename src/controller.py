@@ -10,12 +10,13 @@ from delegates.scanner_delegate import ScanDelegate
 from bluepy.btle import Scanner
 
 
-def start_sensor(nickname, mac, thread_sync):
+def start_sensor(nickname, mac, thread_sync, iface):
     rclpy.init()
     thingy = Sensor(
                     nickname=nickname,
                     mac=mac,
                     thread_sync=thread_sync,
+                    iface = iface,
                     sensor_delegates=[MotionDelegate],
                     services={'rawdata': True}, # TODO: correct with useful data for us
                 )
@@ -29,6 +30,7 @@ class Controller(object):
     def __init__(self):
         self.__scanner = Scanner().withDelegate(ScanDelegate())
         self.__allowed_devices: dict = json.load(open('devices.json'))
+        self.__ifaces: dict = json.load(open('iface.json'))
         self.__connected_devices = []
         self.__is_active = True
         self.__synchronizer = mp.Event()
@@ -89,7 +91,7 @@ class Controller(object):
                     # # Wait for threads synchronization
                     # thingy.start()
                     self.__add_connected_device(device.addr)
-                    process = mp.Process(target = start_sensor, args= (self.__allowed_devices[device.addr.upper()], device.addr, self.__synchronizer,))
+                    process = mp.Process(target = start_sensor, args= (self.__allowed_devices[device.addr.upper()], device.addr, self.__synchronizer, self.__ifaces[self.__allowed_devices[device.addr.upper()]]))
                     process.daemon = True
                     process.start()
 

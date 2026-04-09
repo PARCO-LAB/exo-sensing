@@ -79,7 +79,7 @@ class MotionDelegate(DefaultDelegate):
         qos = QoSProfile(
                     reliability=ReliabilityPolicy.RELIABLE,
                     history=HistoryPolicy.KEEP_LAST,
-                    depth=10
+                    depth=100
                 )
 
         self.pub = self.node.create_publisher(ImuTick, f'/imu/{self.sensor_nickname}', qos)

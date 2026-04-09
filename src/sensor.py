@@ -1,9 +1,26 @@
 import sys
 import threading
 import multiprocessing as Process
-from bluepy.thingy52 import Thingy52
+import bluepy.thingy52
+from bluepy.btle import Peripheral
 import time
 
+class MyThingy52(Peripheral):
+    """
+    Thingy:52 module. Instance the class and enable to get access to the Thingy:52 Sensors.
+    The addr of your device has to be know, or can be found by using the hcitool command line 
+    tool, for example. Call "> sudo hcitool lescan" and your Thingy's address should show up.
+    """
+    def __init__(self, addr, iface = None):
+        Peripheral.__init__(self, addr, addrType="random", iface=iface)
+
+        # Thingy configuration service not implemented
+        self.battery = bluepy.thingy52.BatterySensor(self)
+        self.environment = bluepy.thingy52.EnvironmentService(self)
+        self.ui = bluepy.thingy52.UserInterfaceService(self)
+        self.motion = bluepy.thingy52.MotionService(self)
+        self.sound = bluepy.thingy52.SoundService(self)
+        # DFU Service not implemented
 
 class Sensor(object):
     # TODO: correct default values
@@ -11,13 +28,16 @@ class Sensor(object):
             self,
             mac,
             thread_sync,
+            iface: int = None,
             nickname: str = 'NordicThingy',
             sampling_frequency: int = 100,
             sensor_delegates: list = None,
             services: dict = None
     ):
         self.nickname = nickname
-        self.thingy = Thingy52(mac)
+        #self.thingy = bluepy.thingy52.Thingy52(mac)
+        self.thingy = MyThingy52(mac, iface)
+
         self.mac = mac
         self.synchronizer = thread_sync
         self.sampling_frequency = sampling_frequency
