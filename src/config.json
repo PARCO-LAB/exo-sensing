@@ -11,7 +11,7 @@
   "kafka_topic": "opera_data_wearable_raw",
 
   "transmission_mode": "False",
-  "sensor_sampling_frequency": 60,
+  "sensor_sampling_frequency": 100,
   "fall_time_window_for_detection": 2,
   "shake_time_window_for_detection": 2
 }
